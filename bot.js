@@ -14,7 +14,7 @@ var BUY='https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB
 var TWITTER='https://x.com/Mpc_cto';
 var WEBSITE='';
 var IS_CTO=true;
-var TICKER='$MPC';
+var TICKER='$Mpc';
 var E={rocket:'\u{1F680}',fire:'\u{1F525}',chart:'\u{1F4C8}',lock:'\u{1F512}',check:'\u2705',gem:'\u{1F48E}',money:'\u{1F4B0}',shield:'\u{1F6E1}',wave:'\u{1F44B}',copy:'\u{1F4CB}'};
 var bot=new Telegraf(BOT_TOKEN);
 var app=express();
@@ -32,8 +32,8 @@ try{if(fs.existsSync(IMG))IMG_BUF=fs.readFileSync(IMG);}catch(_){}
 var SILENCE_DELAY=10*60*1000,STRIKE_RESET=86400000,SPAM_WINDOW=60000,SPAM_MAX=5;
 function systemPrompt(withCa){
   var facts=[
-    'You are the community bot for $MPC, a BNB Smart Chain (BSC) meme token.',
-    'Token: MPC ($MPC) | Chain: BNB Smart Chain (BSC)',
+    'You are the community bot for $Mpc, a BNB Smart Chain (BSC) meme token.',
+    'Token: Mpc ($Mpc) | Chain: BNB Smart Chain (BSC)',
     'Supply: 1,000,000,000 | Max Wallet: N/A',
     'Tax: 0% buy / 0% sell',
     'Contract: RENOUNCED | LP: LOCKED',
@@ -75,17 +75,17 @@ function hasFud(t){var l=t.toLowerCase();return FUD.some(function(w){return l.in
 function hasBlockedLink(t){var u=t.match(/https?:\/\/[^\s]+/g)||[];return u.some(function(x){return!x.includes('x.com')&&!x.includes('twitter.com');});}
 function hasTmeLink(t){return/t\.me\/[+a-zA-Z0-9_]+/.test(t)||/telegram\.me\//i.test(t);}
 function hasExtMention(t){if(!t)return false;var mm=t.match(/@[a-zA-Z0-9_]+/g)||[];if(mm.length>1)return true;if(mm.length===1){var idx=t.indexOf(mm[0]);if(idx>0)return true;}return false;}
-var notLiveMsgs=['$MPC hasn\u2019t launched yet. CA coming soon.','Hold tight \u2014 the drop is close.','Not yet. Stay ready.','CA drops soon.'];
-var caPrompts=['One sharp line. Why $MPC right now. No CA.','One line. $MPC fundamentals. No CA.','One line. $MPC is worth holding. No CA.','One line. $MPC built for the long game. No CA.'];
+var notLiveMsgs=['$Mpc hasn\u2019t launched yet. CA coming soon.','Hold tight \u2014 the drop is close.','Not yet. Stay ready.','CA drops soon.'];
+var caPrompts=['One sharp line. Why $Mpc right now. No CA.','One line. $Mpc fundamentals. No CA.','One line. $Mpc is worth holding. No CA.','One line. $Mpc built for the long game. No CA.'];
 var caPromptIdx=0;
 async function buildCaCaption(){var p=caPrompts[caPromptIdx%caPrompts.length];caPromptIdx++;var ai=await smartAsk(systemPrompt(true),p);return ai+'\\n\\n'+CA;}
-var xPrompts=['1-2 lines. $MPC on Twitter. Real energy.','1-2 lines. Why follow $MPC on X.','1-2 lines. $MPC Twitter is worth following.'];
+var xPrompts=['1-2 lines. $Mpc on Twitter. Real energy.','1-2 lines. Why follow $Mpc on X.','1-2 lines. $Mpc Twitter is worth following.'];
 var xPromptIdx=0;
 async function buildXCaption(){var p=xPrompts[xPromptIdx%xPrompts.length];xPromptIdx++;var ai=await smartAsk(systemPrompt(false),p);return ai;}
 var socialsIdx=0;
-function buildSocials(){var i=socialsIdx%3;socialsIdx++;var web=WEBSITE?'\n<a href=\''+WEBSITE+'\'>Website</a>':'';if(i===0)return'<b>$MPC</b>\n<a href=\''+CHART+'\'>Chart</a> | <a href=\''+BUY+'\'>PancakeSwap</a> | <a href=\''+TWITTER+'\'>Twitter</a>'+web;if(i===1)return E.chart+' <a href=\''+CHART+'\'>Chart</a>  '+E.money+' <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>Twitter/X</a>'+web;return'<a href=\''+CHART+'\'>DexScreener</a>  <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>X</a>'+(WEBSITE?' <a href=\''+WEBSITE+'\'>Site</a>':'');}
-var devRepliesCTO=['$MPC is a CTO \u2014 community takeover. Original dev is gone. The community now owns and runs this completely. No dev to rug. The holders are the team.','This is a CTO. Original dev walked away. The community stepped up and took full ownership of $MPC. Community power, not a dev.','No dev here \u2014 $MPC is 100% community-owned. Original dev left. The community holds the wheel and drives this forward.','CTO project. Original dev is gone. Community took over $MPC completely. That is the strength here.'];
-var silenceAngles=['2-3 bullish lines. Why hold $MPC right now.','2-3 lines. Being early to $MPC.','2-3 lines. $MPC built clean: renounced, locked, low tax.','2-3 lines. What $MPC holders know.','2-3 lines. $MPC community is building.','2-3 lines. The move in $MPC is still early.'];
+function buildSocials(){var i=socialsIdx%3;socialsIdx++;var web=WEBSITE?'\n<a href=\''+WEBSITE+'\'>Website</a>':'';if(i===0)return'<b>$Mpc</b>\n<a href=\''+CHART+'\'>Chart</a> | <a href=\''+BUY+'\'>PancakeSwap</a> | <a href=\''+TWITTER+'\'>Twitter</a>'+web;if(i===1)return E.chart+' <a href=\''+CHART+'\'>Chart</a>  '+E.money+' <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>Twitter/X</a>'+web;return'<a href=\''+CHART+'\'>DexScreener</a>  <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>X</a>'+(WEBSITE?' <a href=\''+WEBSITE+'\'>Site</a>':'');}
+var devRepliesCTO=['$Mpc is a CTO \u2014 community takeover. Original dev is gone. The community now owns and runs this completely. No dev to rug. The holders are the team.','This is a CTO. Original dev walked away. The community stepped up and took full ownership of $Mpc. Community power, not a dev.','No dev here \u2014 $Mpc is 100% community-owned. Original dev left. The community holds the wheel and drives this forward.','CTO project. Original dev is gone. Community took over $Mpc completely. That is the strength here.'];
+var silenceAngles=['2-3 bullish lines. Why hold $Mpc right now.','2-3 lines. Being early to $Mpc.','2-3 lines. $Mpc built clean: renounced, locked, low tax.','2-3 lines. What $Mpc holders know.','2-3 lines. $Mpc community is building.','2-3 lines. The move in $Mpc is still early.'];
 var silenceIdx=0;
 async function fireSilence(){if(!groupChatId){resetSilence();return;}try{var p=silenceAngles[silenceIdx%silenceAngles.length];silenceIdx++;var cap=await smartAsk(systemPrompt(caUnlocked),p);await sendImage(groupChatId,cap,{});}catch(_){}resetSilence();}
 function resetSilence(){if(silenceTimer)clearTimeout(silenceTimer);silenceTimer=setTimeout(fireSilence,SILENCE_DELAY);}
@@ -93,7 +93,7 @@ bot.on('new_chat_members',async function(ctx){if(ctx.message.new_chat_members.so
   for(var i=0;i<ctx.message.new_chat_members.length;i++){
     var mem=ctx.message.new_chat_members[i];
     var handle=mem.username?'@'+mem.username:mem.first_name;
-    var opts=[handle+' just joined $MPC.\nRENOUNCED \u2022 LP LOCKED \u2022 0%/0% tax\n'+(caUnlocked?CA:'CA coming soon \u2014 stay close.'),'Glad you\u2019re here, '+handle+'.\n$MPC \u2022 BNB Smart Chain (BSC) \u2022 RENOUNCED \u2022 LP LOCKED\n'+(caUnlocked?'CA: '+CA:'Launch incoming.'),handle+' joined $MPC.\n0%/0% tax \u2022 LP LOCKED \u2022 RENOUNCED\n'+(caUnlocked?CA:'CA reveals soon.')];
+    var opts=[handle+' just joined $Mpc.\nRENOUNCED \u2022 LP LOCKED \u2022 0%/0% tax\n'+(caUnlocked?CA:'CA coming soon \u2014 stay close.'),'Glad you\u2019re here, '+handle+'.\n$Mpc \u2022 BNB Smart Chain (BSC) \u2022 RENOUNCED \u2022 LP LOCKED\n'+(caUnlocked?'CA: '+CA:'Launch incoming.'),handle+' joined $Mpc.\n0%/0% tax \u2022 LP LOCKED \u2022 RENOUNCED\n'+(caUnlocked?CA:'CA reveals soon.')];
     var msg=opts[Math.floor(Math.random()*opts.length)];
     var sent=await ctx.reply(msg);autoDelete(ctx.chat.id,sent.message_id,60000);
   }
@@ -127,4 +127,4 @@ app.get('/health',function(req,res){res.end('OK');});
 async function registerWebhook(){if(!WEBHOOK_URL)return;var url=WEBHOOK_URL+'/webhook';for(var i=0;i<5;i++){try{var ok=await bot.telegram.setWebhook(url);if(ok){console.log('Webhook:',url);return;}}catch(e){console.log('Attempt '+(i+1)+':',e.message);}await new Promise(function(r){setTimeout(r,3000);});}}
 process.on('uncaughtException',function(e){console.error('Uncaught:',e.message);});
 process.on('unhandledRejection',function(e){console.error('Rejection:',e&&e.message);});
-app.listen(PORT,async function(){console.log('$MPC bot on port '+PORT);try{await new Promise(function(r){setTimeout(r,2000);});}catch(_){}try{await registerWebhook();}catch(e){console.log(e.message);}try{resetSilence();}catch(_){}setInterval(function(){if(WEBHOOK_URL)try{fetch(WEBHOOK_URL+'/health').catch(function(){});}catch(_){}},4*60*1000);console.log('$MPC bot live');});
+app.listen(PORT,async function(){console.log('$Mpc bot on port '+PORT);try{await new Promise(function(r){setTimeout(r,2000);});}catch(_){}try{await registerWebhook();}catch(e){console.log(e.message);}try{resetSilence();}catch(_){}setInterval(function(){if(WEBHOOK_URL)try{fetch(WEBHOOK_URL+'/health').catch(function(){});}catch(_){}},4*60*1000);console.log('$Mpc bot live');});
