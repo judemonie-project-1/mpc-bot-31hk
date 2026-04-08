@@ -1,5 +1,5 @@
 {
-  "name": "mubarak-pfp-on-chain-bot",
+  "name": "mpc-bot",
   "version": "1.0.0",
   "main": "bot.js",
   "scripts": {
