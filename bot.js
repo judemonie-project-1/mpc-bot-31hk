@@ -11,7 +11,7 @@ var PORT=process.env.PORT||3000;
 var CA='';
 var CHART='https://dexscreener.com/bsc/';
 var BUY='https://pancakeswap.finance/swap?outputCurrency=';
-var TWITTER='';
+var TWITTER='https://x.com/Mpc_cto';
 var WEBSITE='';
 var E={rocket:'\u{1F680}',fire:'\u{1F525}',chart:'\u{1F4C8}',lock:'\u{1F512}',check:'\u2705',zap:'\u26A1',gem:'\u{1F48E}',star:'\u2B50',money:'\u{1F4B0}',shield:'\u{1F6E1}',wave:'\u{1F44B}',dash:'\u2014',copy:'\u{1F4CB}'};
 var bot=new Telegraf(BOT_TOKEN);
