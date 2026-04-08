@@ -56,7 +56,19 @@ async function sendImage(chatId,caption,extra){await deletePrevImg(chatId);extra
 function autoDelete(chatId,msgId,delay){setTimeout(function(){try{bot.telegram.deleteMessage(chatId,msgId);}catch(_){}},delay);}
 async function isAdmin(ctx,uid){var t=ctx.chat&&ctx.chat.type;if(t!=='group'&&t!=='supergroup')return false;try{var m=await ctx.telegram.getChatMember(ctx.chat.id,uid);return m.status==='administrator'||m.status==='creator';}catch(_){return false;}}
 function getStrike(uid){var now=Date.now(),s=strikes.get(uid);if(!s||now-s.since>STRIKE_RESET){s={count:0,since:now};strikes.set(uid,s);}return s;}
-async function applyStrike(ctx,uid,reason){var s=getStrike(uid);s.count++;try{await ctx.deleteMessage();}catch(_){}var why=reason?' ('+reason+')':'';if(s.count>=3){s.count=0;try{await ctx.telegram.restrictChatMember(ctx.chat.id,uid,{permissions:{can_send_messages:false},until_date:Math.floor(Date.now()/1000)+300});}catch(_){}var m3=await ctx.reply('\u26A0\uFE0F Muted 5 min \u2014 3 strikes'+why+'.');autoDelete(ctx.chat.id,m3.message_id,12000);}else{var m=await ctx.reply('\u26A0\uFE0F Warning '+s.count+'/3'+why);autoDelete(ctx.chat.id,m.message_id,10000);}}
+async function applyStrike(ctx,uid,reason){
+  var s=getStrike(uid);try{await ctx.deleteMessage();}catch(_){}
+  var why=reason?'  ('+reason+')':'';var member=ctx.message&&ctx.message.from;
+  var tag=member&&member.username?'@'+member.username:(member&&member.first_name?member.first_name:'user');
+  s.count++;
+  if(s.count>=3){
+    s.count=0;
+    try{await ctx.telegram.restrictChatMember(ctx.chat.id,uid,{permissions:{can_send_messages:false},until_date:Math.floor(Date.now()/1000)+86400});}catch(_){}
+    var m3=await ctx.reply('\u26A0\uFE0F '+tag+' muted 24h \u2014 3 strikes'+why+'.');autoDelete(ctx.chat.id,m3.message_id,60000);
+  }else{
+    var mw=await ctx.reply('\u26A0\uFE0F '+tag+' warning '+s.count+'/3'+why);autoDelete(ctx.chat.id,mw.message_id,45000);
+  }
+}
 async function checkSpam(ctx,uid){var now=Date.now(),t=spamTracker.get(uid)||{count:0,since:now};if(now-t.since>SPAM_WINDOW)t={count:0,since:now};t.count++;spamTracker.set(uid,t);if(t.count>SPAM_MAX){try{await ctx.telegram.restrictChatMember(ctx.chat.id,uid,{permissions:{can_send_messages:false},until_date:Math.floor(Date.now()/1000)+300});}catch(_){}var m=await ctx.reply('Muted 5 min for spam.');autoDelete(ctx.chat.id,m.message_id,15000);return true;}return false;}
 var FUD=['rug','rugpull','scam','ponzi','honeypot','shit','fuck','bitch','bastard','asshole','cunt','retard','idiot','dump','dumping','dead','worthless','trash','garbage','fake','fraud','exit scam','dev ran','dev is gone','abandoned'];
 function hasFud(t){var l=t.toLowerCase();return FUD.some(function(w){return l.includes(w);});}
@@ -64,14 +76,14 @@ function hasBlockedLink(t){var u=t.match(/https?:\/\/[^\s]+/g)||[];return u.some
 function hasTmeLink(t){return/t\.me\/[+a-zA-Z0-9_]+/.test(t)||/telegram\.me\//i.test(t);}
 function hasExtMention(t){if(!t)return false;var mm=t.match(/@[a-zA-Z0-9_]+/g)||[];if(mm.length>1)return true;if(mm.length===1){var idx=t.indexOf(mm[0]);if(idx>0)return true;}return false;}
 var notLiveMsgs=['$MPC hasn\u2019t launched yet. CA coming soon.','Hold tight \u2014 the drop is close.','Not yet. Stay ready.','CA drops soon.'];
-var caPrompts=['2-3 confident lines. Why $MPC right now. No CA.','2-3 lines. $MPC fundamentals: renounced, locked LP. No CA.','2-3 lines. What makes $MPC worth holding. No CA.','2-3 lines. $MPC built for the long game. No CA.'];
+var caPrompts=['One sharp line. Why $MPC right now. No CA.','One line. $MPC fundamentals. No CA.','One line. $MPC is worth holding. No CA.','One line. $MPC built for the long game. No CA.'];
 var caPromptIdx=0;
-async function buildCaCaption(){var p=caPrompts[caPromptIdx%caPrompts.length];caPromptIdx++;var ai=await smartAsk(systemPrompt(true),p);return ai+'\n\n'+CA+'\n\n'+E.lock+' RENOUNCED '+E.check+' LP LOCKED';}
+async function buildCaCaption(){var p=caPrompts[caPromptIdx%caPrompts.length];caPromptIdx++;var ai=await smartAsk(systemPrompt(true),p);return ai+'\\n\\n'+CA;}
 var xPrompts=['1-2 lines. $MPC on Twitter. Real energy.','1-2 lines. Why follow $MPC on X.','1-2 lines. $MPC Twitter is worth following.'];
 var xPromptIdx=0;
-async function buildXCaption(){var p=xPrompts[xPromptIdx%xPrompts.length];xPromptIdx++;var ai=await smartAsk(systemPrompt(false),p);return ai+'\n\n'+TWITTER;}
+async function buildXCaption(){var p=xPrompts[xPromptIdx%xPrompts.length];xPromptIdx++;var ai=await smartAsk(systemPrompt(false),p);return ai;}
 var socialsIdx=0;
-function buildSocials(){var i=socialsIdx%3;socialsIdx++;var web=WEBSITE?'\n\u{1F310} <a href=\''+WEBSITE+'\'>Website</a>':'';if(i===0)return'<b>$MPC</b>\n<a href=\''+CHART+'\'>Chart</a> | <a href=\''+BUY+'\'>PancakeSwap</a> | <a href=\''+TWITTER+'\'>Twitter</a>'+web;if(i===1)return E.chart+' <a href=\''+CHART+'\'>Chart</a>  '+E.money+' <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>Twitter/X</a>'+web;return'<a href=\''+CHART+'\'>DexScreener</a>  <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>X</a>'+(WEBSITE?' <a href=\''+WEBSITE+'\'>Site</a>':'');}
+function buildSocials(){var i=socialsIdx%3;socialsIdx++;var web=WEBSITE?'\n<a href=\''+WEBSITE+'\'>Website</a>':'';if(i===0)return'<b>$MPC</b>\n<a href=\''+CHART+'\'>Chart</a> | <a href=\''+BUY+'\'>PancakeSwap</a> | <a href=\''+TWITTER+'\'>Twitter</a>'+web;if(i===1)return E.chart+' <a href=\''+CHART+'\'>Chart</a>  '+E.money+' <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>Twitter/X</a>'+web;return'<a href=\''+CHART+'\'>DexScreener</a>  <a href=\''+BUY+'\'>PancakeSwap</a>  <a href=\''+TWITTER+'\'>X</a>'+(WEBSITE?' <a href=\''+WEBSITE+'\'>Site</a>':'');}
 var devRepliesCTO=['$MPC is a CTO \u2014 community takeover. Original dev is gone. The community now owns and runs this completely. No dev to rug. The holders are the team.','This is a CTO. Original dev walked away. The community stepped up and took full ownership of $MPC. Community power, not a dev.','No dev here \u2014 $MPC is 100% community-owned. Original dev left. The community holds the wheel and drives this forward.','CTO project. Original dev is gone. Community took over $MPC completely. That is the strength here.'];
 var silenceAngles=['2-3 bullish lines. Why hold $MPC right now.','2-3 lines. Being early to $MPC.','2-3 lines. $MPC built clean: renounced, locked, low tax.','2-3 lines. What $MPC holders know.','2-3 lines. $MPC community is building.','2-3 lines. The move in $MPC is still early.'];
 var silenceIdx=0;
@@ -92,6 +104,18 @@ async function sendXReply(ctx){var btn={reply_markup:{inline_keyboard:[[{text:'F
 bot.command('x',function(ctx){return sendXReply(ctx);});
 bot.command('twitter',function(ctx){return sendXReply(ctx);});
 bot.command('ca',async function(ctx){if(!caUnlocked)return ctx.reply(notLiveMsgs[Math.floor(Math.random()*notLiveMsgs.length)]);try{var cap=await buildCaCaption();return sendImage(ctx.chat.id,cap,{reply_markup:{inline_keyboard:[[{text:E.copy+' Copy CA',copy_text:{text:CA}}]]}});}catch(_){return ctx.reply(CA);}});
+bot.command('info',function(ctx){
+  var parts=[
+    '<b>'+TICKER+'</b>',
+    'Chain: BNB Smart Chain (BSC)',
+    'Supply: 1,000,000,000',
+    'Max Wallet: '+(MAX_PCT||'N/A')+(MAX_TOK?' ('+MAX_TOK+')':'')+'',
+    'Tax: '+BUY_TAX+'% buy / '+SELL_TAX+'% sell',
+    'Contract: RENOUNCED | LP: LOCKED',
+    'Twitter: '+TWITTER,
+  ];
+  return ctx.reply(parts.join('\n'),{parse_mode:'HTML',disable_web_page_preview:true});
+});
 bot.command('socials',async function(ctx){return ctx.reply(buildSocials(),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('links',async function(ctx){return ctx.reply(buildSocials(),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('revealca',async function(ctx){var t=ctx.chat&&ctx.chat.type;if(t==='private'){caUnlocked=true;saveState();return ctx.reply('CA is now REVEALED.');}var admin=await isAdmin(ctx,ctx.from.id);if(!admin)return;caUnlocked=true;saveState();var m=await ctx.reply('CA is now live.');autoDelete(ctx.chat.id,m.message_id,10000);});
