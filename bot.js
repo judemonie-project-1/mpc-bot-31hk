@@ -105,11 +105,10 @@ async function registerWebhook(){if(!WEBHOOK_URL)return;var url=WEBHOOK_URL+'/we
 process.on('uncaughtException',function(e){console.error('Uncaught:',e.message);});
 process.on('unhandledRejection',function(e){console.error('Rejection:',e&&e.message);});
 async function setCommands(){
-  try{await bot.telegram.setMyCommands([
-    {command:'ca',description:'Get contract address'},
-    {command:'x',description:'Follow on Twitter/X'},
-    {command:'socials',description:'All official links'},
-    {command:'revealca',description:'Reveal contract address (admin)'},
-  ]);}catch(_){}
+  try{
+    await bot.telegram.setMyCommands([{command:'ca',description:'Contract address'},{command:'x',description:'Follow on X'},{command:'socials',description:'All links'}]);
+    await bot.telegram.setMyCommands([{command:'ca',description:'Contract address'},{command:'x',description:'Follow on X'},{command:'socials',description:'All links'},{command:'revealca',description:'Reveal CA'},{command:'hideca',description:'Hide CA'}],{scope:{type:'all_chat_administrators'}});
+  }catch(e){console.log('cmds:',e.message);}
 }
-app.listen(PORT,async function(){console.log('$Mpc bot on port '+PORT);await new Promise(function(r){setTimeout(r,2000);});await registerWebhook();await setCommands();resetSilence();setInterval(function(){if(WEBHOOK_URL)fetch(WEBHOOK_URL+'/health').catch(function(){});},4*60*1000);console.log('$Mpc bot live');});
+}
+app.listen(PORT,async function(){console.log('$Mpc bot on port '+PORT);try{await new Promise(function(r){setTimeout(r,2000);});}catch(_){}try{await registerWebhook();}catch(e){console.log(e.message);}try{await setCommands();}catch(e){console.log(e.message);}try{resetSilence();}catch(_){}setInterval(function(){if(WEBHOOK_URL)fetch(WEBHOOK_URL+'/health').catch(function(){});},4*60*1000);console.log('$Mpc bot live');});
