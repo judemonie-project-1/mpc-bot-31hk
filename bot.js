@@ -33,7 +33,7 @@ var SILENCE_DELAY=10*60*1000,STRIKE_RESET=86400000,SPAM_WINDOW=60000,SPAM_MAX=5;
 function systemPrompt(withCa){
   var facts=[
     'You are the community bot for $Mpc, a BNB Smart Chain (BSC) meme token.',
-    'Token: Mpc ($Mpc) | Chain: BNB Smart Chain (BSC)',
+    'Token: Mubarak pfp on chain ($Mpc) | Chain: BNB Smart Chain (BSC)',
     'Supply: 1,000,000,000 | Max Wallet: N/A',
     'Tax: 0% buy / 0% sell',
     'Contract: RENOUNCED | LP: LOCKED',
