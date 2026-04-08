@@ -23,8 +23,10 @@ var SIL_DELAY=3600000;
 function loadState(){try{var s=JSON.parse(fs.readFileSync(_SF,'utf8'));caUnlocked=!!s.u;groupChatId=s.g||null;}catch(_){}}
 function saveState(){try{fs.writeFileSync(_SF,JSON.stringify({u:caUnlocked,g:groupChatId}));}catch(_){}}
 loadState();
-var IMG=path.join(__dirname,'mpc.jpg'),IMG_BUF=null;
-try{if(fs.existsSync(IMG))IMG_BUF=fs.readFileSync(IMG);}catch(_){}
+var _IMG1=path.join(__dirname,'mpc.jpg');
+var _IMG2=path.join(__dirname,'siren.jpg');
+var IMG=fs.existsSync(_IMG1)?_IMG1:(fs.existsSync(_IMG2)?_IMG2:_IMG1);
+var IMG_BUF=null;try{if(fs.existsSync(IMG))IMG_BUF=fs.readFileSync(IMG);}catch(_){}
 var imgMsgs=new Map(),strikes=new Map(),spamTracker=new Map(),lastReplies=[];
 var SHOUTOUT_ON=false,shoutTimer=null;
 async function delPrevImg(cid){var mid=imgMsgs.get(cid);if(mid){try{await bot.telegram.deleteMessage(cid,mid);}catch(_){}imgMsgs.delete(cid);}}
