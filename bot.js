@@ -23,7 +23,7 @@ var bot=new Telegraf(BOT_TOKEN);
 var app=express();app.use(express.json());
 var _SF='/tmp/state.json';
 var caUnlocked=true,groupChatId=null,silTimer=null;
-var SIL_DELAY=3600000;
+var SIL_DELAY=600000;
 function loadState(){try{var s=JSON.parse(fs.readFileSync(_SF,'utf8'));caUnlocked=!!s.u;groupChatId=s.g||null;}catch(_){}}
 function saveState(){try{fs.writeFileSync(_SF,JSON.stringify({u:caUnlocked,g:groupChatId}));}catch(_){}}
 loadState();
