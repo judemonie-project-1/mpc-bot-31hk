@@ -100,57 +100,20 @@ bot.command('socials',function(ctx){return ctx.reply('<a href=\'https://dexscree
 bot.command('links',function(ctx){return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':'')+(WEBSITE?' | <a href=\''+WEBSITE+'\'>Website</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('info',function(ctx){return ctx.reply('<b>$Mpc</b> \u2014 BNB Smart Chain (BSC)\n\nSupply: N/A\nMax Wallet: N/A\nTax: 0% buy / 0% sell\nContract: RENOUNCED\nLP: BURNED'+(TWITTER?'\nTwitter: '+TWITTER:''),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('shill',async function(ctx){
+  var shillMsgs=[
+    'Have you heard about $Mpc?\n\n$Mpc \u2014 community-owned on BSC.\nRenounced. LP BURNED. No dev games.\nThis is the quiet move. Load up.',
+    'Looking for a BSC token built by real people?\n\n$Mpc \u2014 fully community-owned.\nRenounced contract. LP BURNED. Real narrative.\nGet in early \u261d',
+    'The move others will regret missing.\n\n$Mpc on BSC \u2014 community takeover.\nRenounced. LP BURNED. No rug possible.\nLoad up before it runs.',
+    'What if the next gem was right here?\n\n$Mpc \u2014 zero dev, 100% community.\nRenounced. LP BURNED. Low cap. Real conviction.',
+    'Don\u2019t sleep on $Mpc.\nCommunity took over. Dev is gone. LP BURNED.\nThis is what conviction looks like. Load up.',
+  ];
+  var base=shillMsgs[Math.floor(Math.random()*shillMsgs.length)];
+  var caLine=caUnlocked?'\n\nCA:\n'+CA:'\n\nCA dropping soon.';
   try{
-    var sp='3-4 lines only. Shill '+TICKER+' on BSC. One short curious question. Then: '+TICKER+' is the answer. One real reason (community or narrative or fundamentals). One safety line: renounced + '+LOCKED+'. Short CTA. No hype words. Max 2 emojis. Sound like a real person.';
-    var sm=await smartAsk(sp);
-    if(!sm||sm==='IGNORE'||sm.split('\n').length>8)sm=TICKER+' \u2014 community-owned. Renounced. '+LOCKED+'.\nNarrative is real. Cap is low. Load up.';
-    var caLine=caUnlocked?'\n\nCA:\n'+CA:'\n\nCA dropping soon.';
-    await sendImg(ctx.chat.id,sm+caLine,{});
-  }catch(e){
-    console.log('Shill error:',e.message);
-    var sf=[TICKER+' \\u2014 community-owned. Renounced. '+LOCKED+'.\\nNarrative real. Cap low. Load up.',
-      'The quiet move on BSC? '+TICKER+'.\\nCommunity-owned. Renounced. '+LOCKED+'. Get in.',
-      'Looking for the next gem? '+TICKER+' is it.\\nRenounced. '+LOCKED+'. Real community.'];
-    var fb=sf[Math.floor(Math.random()*sf.length)]+(caUnlocked?'\\n\\nCA:\\n'+CA:'\\n\\nCA dropping soon.');
-    await sendImg(ctx.chat.id,fb,{});
-  }
-});
-bot.on('new_chat_members',async function(ctx){if(ctx.message.new_chat_members.some(function(m){return m.is_bot;}))return;try{await ctx.deleteMessage();}catch(_){}for(var i=0;i<ctx.message.new_chat_members.length;i++){var mem=ctx.message.new_chat_members[i];var h=mem.username?'@'+mem.username:mem.first_name;var opts=[h+' joined $Mpc.\nRENOUNCED \u2022 LP BURNED \u2022 0%/0% tax\n'+(caUnlocked?CA:'CA coming soon.'),'Welcome, '+h+'. $Mpc \u2022 BNB Smart Chain (BSC)\n'+(caUnlocked?'CA: '+CA:'Launch incoming.')];var msg=opts[Math.floor(Math.random()*opts.length)];var s=await ctx.reply(msg);autoDel(ctx.chat.id,s.message_id,60000);}});
-var chatHistory=[];
-function addHistory(t){chatHistory.push(t);if(chatHistory.length>8)chatHistory.shift();}
-function isPromoSpam(text){var t=text.toLowerCase();var pw=['dm me','dm:','t.me/','join our','join now','pump call','100x','1000x','send me','legitimate','long-term promo','promotion','signal','call group','whale','airdrop only','giveaway','free token'];return pw.some(function(w){return t.includes(w);});}
-bot.on('message',async function(ctx){
-  var msg=ctx.message;if(!msg||!ctx.from)return;
-  var uid=ctx.from.id,isPrivate=ctx.chat.type==='private';
-  var text=(msg.text||msg.caption||'').trim();
-  if(!isPrivate&&groupChatId!==ctx.chat.id){groupChatId=ctx.chat.id;saveState();}
-  if(!isPrivate)resetSil();
-  var admin=await isAdmin(ctx,uid);
-  if(!isPrivate){
-    var isFwd=msg.forward_from||msg.forward_sender_name||msg.forward_from_chat||msg.forward_from_message_id;
-    if(isFwd&&!admin){try{await ctx.deleteMessage();}catch(_){}var wf=await ctx.reply('\u26A0\uFE0F No forwarded messages.');autoDel(ctx.chat.id,wf.message_id,8000);return;}
-    if(text&&msg.entities){var mens=msg.entities.filter(function(e){return e.type==='mention';});if(mens.length>0&&!admin){try{await ctx.deleteMessage();}catch(_){}var wm=await ctx.reply('\u26A0\uFE0F No external mentions.');autoDel(ctx.chat.id,wm.message_id,8000);return;}}
-    if(text&&isPromoSpam(text)&&!admin){try{await ctx.deleteMessage();}catch(_){}var wps=await ctx.reply('\u26A0\uFE0F Promotional content removed.');autoDel(ctx.chat.id,wps.message_id,8000);return;}
-    if(text&&hasFud(text)&&!admin)return applyStrike(ctx,uid,'no FUD');
-    if(text&&!admin){var sp=await checkSpam(ctx,uid);if(sp)return;}
-  }
-  if(admin&&!isPrivate){
-    if(!text)return;var lower=text.toLowerCase();
-    var caWa=['ca','contract address','contract','token address'];
-    if(caWa.some(function(w){return lower===w||lower.includes(w);})){if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});}
-    if(lower==='x'||lower==='twitter')return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
-    if(lower==='socials'||lower==='links')return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});
-    return;
-  }
-  if(!text)return;var lower2=text.toLowerCase();addHistory(text);
-  if(lower2.includes('dev')||lower2.includes('cto')||lower2.includes('who run')||lower2.includes('who own')){if(IS_CTO)return ctx.reply(CTO_REPLIES[Math.floor(Math.random()*CTO_REPLIES.length)]);try{var dr=await smartAsk(chatHistory.join('\n'));if(dr&&dr!=='IGNORE')return ctx.reply(dr);}catch(_){}return;}
-  var caWords=['ca','contract address','token address','where is the ca','give ca','show ca','drop ca','contract'];
-  if(caWords.some(function(w){return lower2===w||lower2.includes(w);})){if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});}
-  if(lower2==='x'||lower2==='twitter'||lower2.includes('follow on'))return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
-  if(lower2==='socials'||lower2==='links')return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});
-  if(isPrivate){try{var gr=await smartAsk(chatHistory.join('\n'));if(gr&&gr!=='IGNORE')return ctx.reply(gr);}catch(_){}return;}
-  if(RESPONSE_MODE==='focused'){if(text.indexOf('?')===-1)return;try{var gr2=await smartAsk(chatHistory.join('\n'));if(gr2&&gr2!=='IGNORE')return ctx.reply(gr2);}catch(_){}return;}
-  var tkLow=TICKER.toLowerCase().replace('$','');if(text.indexOf('?')!==-1||lower2.includes(tkLow)){try{var gr3=await smartAsk(chatHistory.join('\n'));if(gr3&&gr3!=='IGNORE')return ctx.reply(gr3);}catch(_){}}
+    var aiShill=await smartAsk('Rewrite this shill naturally in 3-4 lines, keep the facts, sound like a real person not a bot: '+base);
+    if(aiShill&&aiShill!=='IGNORE'&&aiShill.length>10&&aiShill.split('\n').length<=6)base=aiShill;
+  }catch(_){}
+  await sendImg(ctx.chat.id,base+caLine,{});
 });
 app.post('/webhook',function(req,res){bot.handleUpdate(req.body,res);});
 app.get('/',function(req,res){res.end('OK');});
