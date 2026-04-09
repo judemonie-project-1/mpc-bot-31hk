@@ -6,8 +6,8 @@ var fs=require('fs');
 var path=require('path');
 var BOT_TOKEN=process.env.BOT_TOKEN;
 var _groqPool=[];
-for(var _gi=1;_gi<=10;_gi++){var _gk=process.env['GROQ_KEY_'+_gi];if(_gk)_groqPool.push(_gk.trim());}
-if(process.env.GROQ_API_KEY&&_groqPool.indexOf(process.env.GROQ_API_KEY.trim())===-1)_groqPool.unshift(process.env.GROQ_API_KEY.trim());
+if(process.env.GROQ_API_KEY)_groqPool.push(process.env.GROQ_API_KEY.trim());
+for(var _gi=1;_gi<=10;_gi++){var _gk=process.env['GROQ_KEY_'+_gi];if(_gk&&_groqPool.indexOf(_gk.trim())===-1)_groqPool.push(_gk.trim());}
 var _groqIdx=0;
 function nextGroqKey(){if(!_groqPool.length)return'';var k=_groqPool[_groqIdx%_groqPool.length];_groqIdx++;return k;}
 var WEBHOOK_URL=(process.env.WEBHOOK_URL||'').trim();
@@ -47,7 +47,8 @@ function sysPrompt(){
   return 'You are the community bot for $Mpc, a BNB Smart Chain (BSC) meme token.\nToken: $Mpc | Chain: BNB Smart Chain (BSC)\nSupply: N/A | Max Wallet: N/A\nTax: 0% buy / 0% sell\nContract: RENOUNCED | LP: BURNED\nDEV: CTO. Original dev gone. Community owns $Mpc completely. Say this clearly when asked.'+(TWITTER?'\nTwitter: '+TWITTER:'')+'\nNarrative: '+"Mubarak PFP ☪️\nWhere Middle Eastern legend meets pixel-powered meme energy.\nBorn from culture, rising with community, and blessed with barakah."+'\nPersonality: High energy, exciting, bullish. Match community energy. Enthusiastic but genuine.\nRULES: 2-4 lines max. Natural and professional. Never share TG group link. Never repeat reply. If hype/casual/no question: reply IGNORE exactly.';
 }
 async function ask(msg){
-  var lastErr,attempts=Math.max(1,_groqPool.length);
+  if(!_groqPool.length)throw new Error('No AI key configured. Add one with /addgroq in factory.');
+  var lastErr,attempts=_groqPool.length;
   for(var _ai=0;_ai<attempts;_ai++){
     try{
       var _gc=new Groq({apiKey:nextGroqKey()});
