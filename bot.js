@@ -1,3 +1,4 @@
+// build:1775750996677
 'use strict';
 var Telegraf=require('telegraf').Telegraf;
 var express=require('express');
@@ -116,6 +117,68 @@ bot.command('shill',async function(ctx){
     if(aiShill&&aiShill!=='IGNORE'&&aiShill.length>10&&aiShill.split('\n').length<=6)base=aiShill;
   }catch(_){}
   await sendImg(ctx.chat.id,base+caLine+tgLine,{});
+});
+var chatHistory=[];
+function addHistory(text){chatHistory.push(text);if(chatHistory.length>8)chatHistory.shift();}
+async function isGroupMember(chatId,uid){try{var m=await bot.telegram.getChatMember(chatId,uid);return ['member','administrator','creator','restricted'].includes(m.status);}catch(_){return false;}}
+function hasExternalMention(text,entities,chatMembers){
+  if(!entities)return false;
+  return entities.some(function(e){return e.type==='mention';});
+}
+function isPromoSpam(text){
+  var t=text.toLowerCase();
+  var promoWords=['dm me','dm:','t.me/','join our','join now','pump call','100x','1000x','send me','contact me','legitimate','serious project','long-term promo','promotion','signal','call group','whale','airdrop only','giveaway','free token'];
+  return promoWords.some(function(w){return t.includes(w);});
+}
+bot.on('message',async function(ctx){
+  var msg=ctx.message;if(!msg||!ctx.from)return;
+  var uid=ctx.from.id,isPrivate=ctx.chat.type==='private';
+  var text=(msg.text||msg.caption||'').trim();
+  if(!isPrivate&&groupChatId!==ctx.chat.id){groupChatId=ctx.chat.id;saveState();if(parseInt(SIL_DELAY||'0')>0){try{resetSil();}catch(_){}}try{schedShout();}catch(_){}}
+  if(!isPrivate)resetSil();
+  var admin=await isAdmin(ctx,uid);
+  if(!isPrivate){
+    var isForward=msg.forward_from||msg.forward_sender_name||msg.forward_from_chat||msg.forward_from_message_id;
+    if(isForward&&!admin){try{await ctx.deleteMessage();}catch(_){}var wf=await ctx.reply('\u26A0\uFE0F No forwarded messages.');autoDel(ctx.chat.id,wf.message_id,8000);return;}
+    if(text&&hasExternalMention(text,msg.entities)&&!admin){
+      var allMentions=msg.entities.filter(function(e){return e.type==='mention';}).map(function(e){return text.substr(e.offset,e.length);});
+      var isExternal=allMentions.some(function(m){return m.toLowerCase()!=='@'+ctx.botInfo.username.toLowerCase();});
+      if(isExternal){try{await ctx.deleteMessage();}catch(_){}var wm2=await ctx.reply('\u26A0\uFE0F No external mentions or promotions.');autoDel(ctx.chat.id,wm2.message_id,8000);return;}
+    }
+    if(text&&isPromoSpam(text)&&!admin){try{await ctx.deleteMessage();}catch(_){}var wps=await ctx.reply('\u26A0\uFE0F Promotional content removed.');autoDel(ctx.chat.id,wps.message_id,8000);return;}
+    if(text&&hasFud(text)&&!admin)return applyStrike(ctx,uid,'no FUD');
+    if(text&&!admin){var sp=await checkSpam(ctx,uid);if(sp)return;}
+  }
+  if(admin&&!isPrivate){
+    if(!text)return;
+    var lower=text.toLowerCase();
+    var caW=['ca','contract address','contract','token address'];
+    if(caW.some(function(w){return lower===w||lower.includes(w);})){
+      if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);
+      await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});
+    }
+    if(lower==='x'||lower==='twitter')return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
+    if(lower==='socials'||lower==='links')return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});
+    return;
+  }
+  if(!text)return;
+  var lower2=text.toLowerCase();
+  addHistory(text);
+  if(lower2.includes('dev')||lower2.includes('cto')||lower2.includes('community takeover')||lower2.includes('who run')||lower2.includes('who own')){
+    if(IS_CTO)return ctx.reply(CTO_REPLIES[Math.floor(Math.random()*CTO_REPLIES.length)]);
+    try{var dr=await smartAsk(chatHistory.join('\n'));if(dr&&dr!=='IGNORE')return ctx.reply(dr);}catch(_){}return;
+  }
+  var caWords=['ca','contract address','token address','where is the ca','give ca','show ca','drop ca','contract'];
+  if(caWords.some(function(w){return lower2===w||lower2.includes(w);})){
+    if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);
+    await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});
+  }
+  if(lower2==='x'||lower2==='twitter'||lower2.includes('follow on'))return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
+  if(lower2==='socials'||lower2==='links')return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});
+  if(isPrivate){try{var gr=await smartAsk(chatHistory.join('\n'));if(gr&&gr!=='IGNORE')return ctx.reply(gr);}catch(_){}return;}
+  if(RESPONSE_MODE==='focused'){if(text.indexOf('?')===-1)return;try{var gr2=await smartAsk(chatHistory.join('\n'));if(gr2&&gr2!=='IGNORE')return ctx.reply(gr2);}catch(_){}return;}
+  var tkLow=TICKER.toLowerCase().replace('$','');
+  if(text.indexOf('?')!==-1||lower2.includes(tkLow)){try{var gr3=await smartAsk(chatHistory.join('\n'));if(gr3&&gr3!=='IGNORE')return ctx.reply(gr3);}catch(_){}}
 });
 app.post('/webhook',function(req,res){bot.handleUpdate(req.body,res);});
 app.get('/',function(req,res){res.end('OK');});
