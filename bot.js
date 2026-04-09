@@ -5,7 +5,11 @@ var Groq=require('groq-sdk');
 var fs=require('fs');
 var path=require('path');
 var BOT_TOKEN=process.env.BOT_TOKEN;
-var GROQ_API_KEY=process.env.GROQ_API_KEY;
+var _groqPool=[];
+for(var _gi=1;_gi<=10;_gi++){var _gk=process.env['GROQ_KEY_'+_gi];if(_gk)_groqPool.push(_gk.trim());}
+if(process.env.GROQ_API_KEY&&_groqPool.indexOf(process.env.GROQ_API_KEY.trim())===-1)_groqPool.unshift(process.env.GROQ_API_KEY.trim());
+var _groqIdx=0;
+function nextGroqKey(){if(!_groqPool.length)return'';var k=_groqPool[_groqIdx%_groqPool.length];_groqIdx++;return k;}
 var WEBHOOK_URL=(process.env.WEBHOOK_URL||'').trim();
 var PORT=process.env.PORT||3000;
 var TICKER='$Mpc';
@@ -15,7 +19,6 @@ var WEBSITE='';
 var IS_CTO=true;
 var RESPONSE_MODE='conversational';
 var bot=new Telegraf(BOT_TOKEN);
-var groq=new Groq({apiKey:GROQ_API_KEY});
 var app=express();app.use(express.json());
 var _SF='/tmp/state.json';
 var caUnlocked=true,groupChatId=null,silTimer=null;
@@ -43,7 +46,17 @@ var CTO_REPLIES=['$Mpc is a CTO. Original dev gone. Community owns and runs this
 function sysPrompt(){
   return 'You are the community bot for $Mpc, a BNB Smart Chain (BSC) meme token.\nToken: $Mpc | Chain: BNB Smart Chain (BSC)\nSupply: N/A | Max Wallet: N/A\nTax: 0% buy / 0% sell\nContract: RENOUNCED | LP: LOCKED\nDEV: CTO. Original dev gone. Community owns $Mpc completely. Say this clearly when asked.'+(TWITTER?'\nTwitter: '+TWITTER:'')+'\nNarrative: '+"Mubarak PFP ☪️\nWhere Middle Eastern legend meets pixel-powered meme energy.\nBorn from culture, rising with community, and blessed with barakah."+'\nPersonality: High energy, exciting, bullish. Match community energy. Enthusiastic but genuine.\nRULES: 2-4 lines max. Natural and professional. Never share TG group link. Never repeat reply. If hype/casual/no question: reply IGNORE exactly.';
 }
-async function ask(msg){var r=await groq.chat.completions.create({model:'llama-3.3-70b-versatile',temperature:1.0,max_tokens:160,messages:[{role:'system',content:sysPrompt()},{role:'user',content:msg}]});return r.choices[0].message.content.trim();}
+async function ask(msg){
+  var lastErr,attempts=Math.max(1,_groqPool.length);
+  for(var _ai=0;_ai<attempts;_ai++){
+    try{
+      var _gc=new Groq({apiKey:nextGroqKey()});
+      var r=await _gc.chat.completions.create({model:'llama-3.3-70b-versatile',temperature:1.0,max_tokens:160,messages:[{role:'system',content:sysPrompt()},{role:'user',content:msg}]});
+      return r.choices[0].message.content.trim();
+    }catch(e){lastErr=e;console.log('Groq attempt '+(_ai+1)+' failed:',e.message);}
+  }
+  throw lastErr||new Error('All Groq keys failed');
+}
 async function smartAsk(msg){var r=await ask(msg);if(lastReplies.includes(r))r=await ask(msg+' Give a completely different response.');lastReplies.push(r);if(lastReplies.length>12)lastReplies.shift();return r;}
 var SIL_ANG=['2-3 lines. Why hold $Mpc right now.','2-3 lines. $Mpc fundamentals: renounced, LP locked.','2-3 lines. Being early to $Mpc.','2-3 lines. $Mpc community is building.','2-3 lines. The move in $Mpc is still early.'];
 var silIdx=0;
@@ -87,14 +100,12 @@ bot.command('links',function(ctx){return ctx.reply('<a href=\'https://dexscreene
 bot.command('info',function(ctx){return ctx.reply('<b>$Mpc</b> \u2014 BNB Smart Chain (BSC)\n\nSupply: N/A\nMax Wallet: N/A\nTax: 0% buy / 0% sell\nContract: RENOUNCED\nLP: LOCKED'+(TWITTER?'\nTwitter: '+TWITTER:''),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('shill',async function(ctx){
   try{
-    var p='Write a punchy shill for $Mpc, a BNB Smart Chain (BSC) meme token. '+
-      'Opener: catchy question. Then: $Mpc is the answer! Then: 1-2 lines (community, renounced, locked, narrative). '+
-      'Then: load up line. Max 6 lines total. No hashtags. Real energy.';
-    var sm=await smartAsk(p);
-    if(!sm||sm==='IGNORE')sm='$Mpc is the move. Community owns it. Renounced and locked. Load up.';
-    var caLine=caUnlocked?'\nCA:\n'+CA:'\nCA coming soon. Stay close.';
+    var sp='3-4 lines only. Shill '+TICKER+' on BSC. One short curious question. Then: '+TICKER+' is the answer. One real reason (community or narrative or fundamentals). One safety line: renounced + '+LOCKED+'. Short CTA. No hype words. Max 2 emojis. Sound like a real person.';
+    var sm=await smartAsk(sp);
+    if(!sm||sm==='IGNORE'||sm.split('\n').length>8)sm=TICKER+' \u2014 community-owned. Renounced. '+LOCKED+'.\nNarrative is real. Cap is low. Load up.';
+    var caLine=caUnlocked?'\n\nCA:\n'+CA:'\n\nCA dropping soon.';
     await sendImg(ctx.chat.id,sm+caLine,{});
-  }catch(e){ctx.reply('$Mpc is the move. Community owns it. Load up.');}
+  }catch(e){ctx.reply(TICKER+' is the move. Load up.');}
 });
 bot.on('new_chat_members',async function(ctx){if(ctx.message.new_chat_members.some(function(m){return m.is_bot;}))return;try{await ctx.deleteMessage();}catch(_){}for(var i=0;i<ctx.message.new_chat_members.length;i++){var mem=ctx.message.new_chat_members[i];var h=mem.username?'@'+mem.username:mem.first_name;var opts=[h+' joined $Mpc.\nRENOUNCED \u2022 LP LOCKED \u2022 0%/0% tax\n'+(caUnlocked?CA:'CA coming soon.'),'Welcome, '+h+'. $Mpc \u2022 BNB Smart Chain (BSC)\n'+(caUnlocked?'CA: '+CA:'Launch incoming.')];var msg=opts[Math.floor(Math.random()*opts.length)];var s=await ctx.reply(msg);autoDel(ctx.chat.id,s.message_id,60000);}});
 var chatHistory=[];
