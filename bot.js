@@ -15,6 +15,7 @@ var PORT=process.env.PORT||3000;
 var TICKER='$Mpc';
 var CA='0x5794FF15f6bd01Eaa25DB48353886810467B0D1D';
 var TWITTER='https://x.com/mpc_ctolead';
+var TG='https://t.me/mpccto';
 var WEBSITE='';
 var IS_CTO=true;
 var RESPONSE_MODE='conversational';
@@ -109,11 +110,12 @@ bot.command('shill',async function(ctx){
   ];
   var base=shillMsgs[Math.floor(Math.random()*shillMsgs.length)];
   var caLine=caUnlocked?'\n\nCA:\n'+CA:'\n\nCA dropping soon.';
+  var tgLine=TG?'\\n\\n\\u{1F4AC} Join: '+TG:'';
   try{
     var aiShill=await smartAsk('Rewrite this shill naturally in 3-4 lines, keep the facts, sound like a real person not a bot: '+base);
     if(aiShill&&aiShill!=='IGNORE'&&aiShill.length>10&&aiShill.split('\n').length<=6)base=aiShill;
   }catch(_){}
-  await sendImg(ctx.chat.id,base+caLine,{});
+  await sendImg(ctx.chat.id,base+caLine+tgLine,{});
 });
 app.post('/webhook',function(req,res){bot.handleUpdate(req.body,res);});
 app.get('/',function(req,res){res.end('OK');});
