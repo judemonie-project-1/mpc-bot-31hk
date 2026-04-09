@@ -18,7 +18,7 @@ var bot=new Telegraf(BOT_TOKEN);
 var groq=new Groq({apiKey:GROQ_API_KEY});
 var app=express();app.use(express.json());
 var _SF='/tmp/state.json';
-var caUnlocked=false,groupChatId=null,silTimer=null;
+var caUnlocked=true,groupChatId=null,silTimer=null;
 var SIL_DELAY=3600000;
 function loadState(){try{var s=JSON.parse(fs.readFileSync(_SF,'utf8'));caUnlocked=!!s.u;groupChatId=s.g||null;}catch(_){}}
 function saveState(){try{fs.writeFileSync(_SF,JSON.stringify({u:caUnlocked,g:groupChatId}));}catch(_){}}
@@ -49,8 +49,35 @@ var SIL_ANG=['2-3 lines. Why hold $Mpc right now.','2-3 lines. $Mpc fundamentals
 var silIdx=0;
 async function fireSilence(){if(!groupChatId)return resetSil();try{var p=SIL_ANG[silIdx%SIL_ANG.length];silIdx++;var cap=await smartAsk(p);if(cap&&cap!=='IGNORE')await sendImg(groupChatId,cap,{});}catch(_){}resetSil();}
 function resetSil(){if(silTimer)clearTimeout(silTimer);if(SIL_DELAY===0||SIL_DELAY==='0')return;silTimer=setTimeout(fireSilence,parseInt(SIL_DELAY));}
-async function doShoutout(){if(!groupChatId||!SHOUTOUT_ON)return;try{var admins=await bot.telegram.getChatAdministrators(groupChatId);var humans=admins.filter(function(a){return!a.user.is_bot;});var names=humans.map(function(a){return a.user.username?'@'+a.user.username:a.user.first_name;});if(!names.length)return schedShout();var ppt='1-2 warm lines. Shoutout to admins keeping $Mpc alive: '+names.join(', ')+'. Sound genuine. Tag them.';var msg=await smartAsk(ppt);if(msg&&msg!=='IGNORE'){var sm=await bot.telegram.sendMessage(groupChatId,msg);setTimeout(function(){try{bot.telegram.deleteMessage(groupChatId,sm.message_id);}catch(_){}},7200000);}}catch(_){}schedShout();}
-function schedShout(){if(shoutTimer)clearTimeout(shoutTimer);if(!SHOUTOUT_ON)return;var slots=[21600000,43200000,61200000,75600000];var now=Date.now()%86400000;var next=slots.find(function(t){return t>now;});var wait=next!==undefined?next-now:86400000-now+slots[0];wait+=Math.floor(Math.random()*1800000);shoutTimer=setTimeout(doShoutout,wait);}
+async function doShoutout(){
+  if(!groupChatId||!SHOUTOUT_ON){schedShout();return;}
+  try{
+    var admins=await bot.telegram.getChatAdministrators(groupChatId);
+    var humans=admins.filter(function(a){return!a.user.is_bot;});
+    var names=humans.map(function(a){return a.user.username?'@'+a.user.username:a.user.first_name;});
+    if(!names.length){schedShout();return;}
+    var ppt='Write 1-2 warm genuine lines appreciating these $Mpc admins for keeping the community alive: '+names.join(', ')+'. Be specific, sound human, tag them by name.';
+    var msg=await smartAsk(ppt);
+    if(msg&&msg!=='IGNORE'&&msg.length>5){
+      var sm=await bot.telegram.sendMessage(groupChatId,msg);
+      setTimeout(function(){try{bot.telegram.deleteMessage(groupChatId,sm.message_id);}catch(_){}},7200000);
+      console.log('Shoutout sent to '+groupChatId);
+    }
+  }catch(e){console.log('Shoutout error:',e.message);}
+  schedShout();
+}
+function schedShout(){
+  if(shoutTimer)clearTimeout(shoutTimer);
+  if(!SHOUTOUT_ON||!groupChatId)return;
+  // Fire at 6am, 12pm, 5pm, 9pm WAT (5,11,16,20 UTC) + random offset
+  var slots=[18000000,39600000,57600000,72000000];
+  var now=Date.now()%86400000;
+  var next=slots.find(function(t){return t>now;});
+  var wait=next!==undefined?next-now:(86400000-now+slots[0]);
+  wait+=Math.floor(Math.random()*3600000);
+  shoutTimer=setTimeout(doShoutout,wait);
+  console.log('Next shoutout in',Math.round(wait/60000),'min');
+}
 bot.command('shoutout',async function(ctx){var admin=await isAdmin(ctx,ctx.from.id);if(!admin)return;var arg=(ctx.message.text||'').split(' ')[1]||'';if(arg==='on'){SHOUTOUT_ON=true;schedShout();return ctx.reply('\u2705 Admin shoutouts enabled. Fires 2-4x daily.');}if(arg==='off'){SHOUTOUT_ON=false;if(shoutTimer)clearTimeout(shoutTimer);return ctx.reply('\u274C Admin shoutouts disabled.');}if(arg==='now'){await doShoutout();return;}return ctx.reply('Usage: /shoutout on / off / now');});
 bot.command('ca',async function(ctx){if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});});
 bot.command('x',async function(ctx){return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});});
@@ -58,8 +85,17 @@ bot.command('twitter',async function(ctx){return sendImg(ctx.chat.id,'Follow $Mp
 bot.command('socials',function(ctx){return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':'')+(WEBSITE?' | <a href=\''+WEBSITE+'\'>Website</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('links',function(ctx){return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':'')+(WEBSITE?' | <a href=\''+WEBSITE+'\'>Website</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('info',function(ctx){return ctx.reply('<b>$Mpc</b> \u2014 BNB Smart Chain (BSC)\n\nSupply: N/A\nMax Wallet: N/A\nTax: 0% buy / 0% sell\nContract: RENOUNCED\nLP: LOCKED'+(TWITTER?'\nTwitter: '+TWITTER:''),{parse_mode:'HTML',disable_web_page_preview:true});});
-bot.command('revealca',async function(ctx){var t=ctx.chat&&ctx.chat.type;if(t==='private'){caUnlocked=true;saveState();return ctx.reply('CA is now REVEALED.');}var a=await isAdmin(ctx,ctx.from.id);if(!a)return;caUnlocked=true;saveState();var m=await ctx.reply('CA is now live.');autoDel(ctx.chat.id,m.message_id,10000);});
-bot.command('hideca',async function(ctx){var t=ctx.chat&&ctx.chat.type;if(t==='private'){caUnlocked=false;saveState();return ctx.reply('CA hidden.');}var a=await isAdmin(ctx,ctx.from.id);if(!a)return;caUnlocked=false;saveState();var m=await ctx.reply('CA is now hidden.');autoDel(ctx.chat.id,m.message_id,10000);});
+bot.command('shill',async function(ctx){
+  try{
+    var p='Write a punchy shill for $Mpc, a BNB Smart Chain (BSC) meme token. '+
+      'Opener: catchy question. Then: $Mpc is the answer! Then: 1-2 lines (community, renounced, locked, narrative). '+
+      'Then: load up line. Max 6 lines total. No hashtags. Real energy.';
+    var sm=await smartAsk(p);
+    if(!sm||sm==='IGNORE')sm='$Mpc is the move. Community owns it. Renounced and locked. Load up.';
+    var caLine=caUnlocked?'\nCA:\n'+CA:'\nCA coming soon. Stay close.';
+    await sendImg(ctx.chat.id,sm+caLine,{});
+  }catch(e){ctx.reply('$Mpc is the move. Community owns it. Load up.');}
+});
 bot.on('new_chat_members',async function(ctx){if(ctx.message.new_chat_members.some(function(m){return m.is_bot;}))return;try{await ctx.deleteMessage();}catch(_){}for(var i=0;i<ctx.message.new_chat_members.length;i++){var mem=ctx.message.new_chat_members[i];var h=mem.username?'@'+mem.username:mem.first_name;var opts=[h+' joined $Mpc.\nRENOUNCED \u2022 LP LOCKED \u2022 0%/0% tax\n'+(caUnlocked?CA:'CA coming soon.'),'Welcome, '+h+'. $Mpc \u2022 BNB Smart Chain (BSC)\n'+(caUnlocked?'CA: '+CA:'Launch incoming.')];var msg=opts[Math.floor(Math.random()*opts.length)];var s=await ctx.reply(msg);autoDel(ctx.chat.id,s.message_id,60000);}});
 var chatHistory=[];
 function addHistory(t){chatHistory.push(t);if(chatHistory.length>8)chatHistory.shift();}
