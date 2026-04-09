@@ -1,4 +1,4 @@
-// build:1775751953046
+// build:1775755696887
 'use strict';
 var Telegraf=require('telegraf').Telegraf;
 var express=require('express');
@@ -32,10 +32,12 @@ var _IMG1=path.join(__dirname,'mpc.jpg');
 var _IMG2=path.join(__dirname,'siren.jpg');
 var IMG=fs.existsSync(_IMG1)?_IMG1:(fs.existsSync(_IMG2)?_IMG2:_IMG1);
 var IMG_BUF=null;try{if(fs.existsSync(IMG))IMG_BUF=fs.readFileSync(IMG);}catch(_){}
-var imgMsgs=new Map(),strikes=new Map(),spamTracker=new Map(),lastReplies=[];
-var SHOUTOUT_ON=false,shoutTimer=null;
-async function delPrevImg(cid){var mid=imgMsgs.get(cid);if(mid){try{await bot.telegram.deleteMessage(cid,mid);}catch(_){}imgMsgs.delete(cid);}}
-async function sendImg(cid,cap,extra){await delPrevImg(cid);extra=extra||{};if(IMG_BUF){try{var m=await bot.telegram.sendPhoto(cid,{source:IMG_BUF},Object.assign({caption:cap,parse_mode:'HTML'},extra));imgMsgs.set(cid,m.message_id);return m;}catch(e){IMG_BUF=null;}}return bot.telegram.sendMessage(cid,cap,Object.assign({parse_mode:'HTML'},extra));}
+var caMsg=new Map(),xMsg=new Map(),shillMsg=new Map();
+var silImgId=null,strikes=new Map(),spamTracker=new Map(),lastReplies=[];
+var SHOUTOUT_ON=true,shoutTimer=null;
+async function delPrev(map,cid){var mid=map.get(cid);if(mid){try{await bot.telegram.deleteMessage(cid,mid);}catch(_){}map.delete(cid);}}
+async function sendWithTracker(map,cid,cap,extra){await delPrev(map,cid);extra=extra||{};if(IMG_BUF){try{var m=await bot.telegram.sendPhoto(cid,{source:IMG_BUF},Object.assign({caption:cap,parse_mode:'HTML'},extra));map.set(cid,m.message_id);return m;}catch(e){IMG_BUF=null;}}var m2=await bot.telegram.sendMessage(cid,cap,Object.assign({parse_mode:'HTML'},extra));map.set(cid,m2.message_id);return m2;}
+async function sendImg(cid,cap,extra){return sendWithTracker(shillMsg,cid,cap,extra);}
 function autoDel(cid,mid,ms){setTimeout(function(){try{bot.telegram.deleteMessage(cid,mid);}catch(_){}},ms);}
 async function isAdmin(ctx,uid){var t=ctx.chat&&ctx.chat.type;if(t!=='group'&&t!=='supergroup')return false;try{var m=await ctx.telegram.getChatMember(ctx.chat.id,uid);return m.status==='administrator'||m.status==='creator';}catch(_){return false;}}
 function getStrike(uid){var n=Date.now(),s=strikes.get(uid);if(!s||n-s.since>86400000){s={count:0,since:n};strikes.set(uid,s);}return s;}
@@ -63,7 +65,25 @@ async function ask(msg){
 async function smartAsk(msg){var r=await ask(msg);if(lastReplies.includes(r))r=await ask(msg+' Give a completely different response.');lastReplies.push(r);if(lastReplies.length>12)lastReplies.shift();return r;}
 var SIL_ANG=['2-3 lines. Why hold $Mpc right now.','2-3 lines. $Mpc fundamentals: renounced, LP locked.','2-3 lines. Being early to $Mpc.','2-3 lines. $Mpc community is building.','2-3 lines. The move in $Mpc is still early.'];
 var silIdx=0;
-async function fireSilence(){if(!groupChatId)return resetSil();try{var p=SIL_ANG[silIdx%SIL_ANG.length];silIdx++;var cap=await smartAsk(p);if(cap&&cap!=='IGNORE')await sendImg(groupChatId,cap,{});}catch(_){}resetSil();}
+async function fireSilence(){if(!groupChatId)return resetSil();
+  try{
+    // Delete previous silence breaker first
+    if(silImgId){try{await bot.telegram.deleteMessage(groupChatId,silImgId);}catch(_){}silImgId=null;}
+    try{await bot.telegram.unpinChatMessage(groupChatId);}catch(_){}
+    var p=SIL_ANG[silIdx%SIL_ANG.length];silIdx++;
+    var cap=await smartAsk(p);
+    if(cap&&cap!=='IGNORE'){
+      // Send with image, store ID separately from CA tracker
+      var silM;
+      if(IMG_BUF){try{silM=await bot.telegram.sendPhoto(groupChatId,{source:IMG_BUF},{caption:cap,parse_mode:'HTML'});}catch(_){}}
+      if(!silM)silM=await bot.telegram.sendMessage(groupChatId,cap,{parse_mode:'HTML'});
+      silImgId=silM.message_id;
+      // Pin and notify all
+      try{await bot.telegram.pinChatMessage(groupChatId,silImgId,{disable_notification:false});}catch(_){}
+    }
+  }catch(e){console.log('Silence breaker error:',e.message);}
+  resetSil();
+}
 function resetSil(){if(silTimer)clearTimeout(silTimer);if(SIL_DELAY===0||SIL_DELAY==='0')return;silTimer=setTimeout(fireSilence,parseInt(SIL_DELAY));}
 async function doShoutout(){
   if(!groupChatId||!SHOUTOUT_ON){schedShout();return;}
@@ -95,9 +115,9 @@ function schedShout(){
   console.log('Next shoutout in',Math.round(wait/60000),'min');
 }
 bot.command('shoutout',async function(ctx){var admin=await isAdmin(ctx,ctx.from.id);if(!admin)return;var arg=(ctx.message.text||'').split(' ')[1]||'';if(arg==='on'){SHOUTOUT_ON=true;schedShout();return ctx.reply('\u2705 Admin shoutouts enabled. Fires 2-4x daily.');}if(arg==='off'){SHOUTOUT_ON=false;if(shoutTimer)clearTimeout(shoutTimer);return ctx.reply('\u274C Admin shoutouts disabled.');}if(arg==='now'){await doShoutout();return;}return ctx.reply('Usage: /shoutout on / off / now');});
-bot.command('ca',async function(ctx){if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});});
-bot.command('x',async function(ctx){return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});});
-bot.command('twitter',async function(ctx){return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});});
+bot.command('ca',async function(ctx){if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);await sendWithTracker(caMsg,ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});});
+bot.command('x',async function(ctx){return sendWithTracker(xMsg,ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});});
+bot.command('twitter',async function(ctx){return sendWithTracker(xMsg,ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});});
 bot.command('socials',function(ctx){return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':'')+(WEBSITE?' | <a href=\''+WEBSITE+'\'>Website</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('links',function(ctx){return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'>PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':'')+(WEBSITE?' | <a href=\''+WEBSITE+'\'>Website</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});});
 bot.command('info',function(ctx){return ctx.reply('<b>$Mpc</b> \u2014 BNB Smart Chain (BSC)\n\nSupply: N/A\nMax Wallet: N/A\nTax: 0% buy / 0% sell\nContract: RENOUNCED\nLP: BURNED'+(TWITTER?'\nTwitter: '+TWITTER:''),{parse_mode:'HTML',disable_web_page_preview:true});});
@@ -116,7 +136,7 @@ bot.command('shill',async function(ctx){
     var aiShill=await smartAsk('Rewrite this shill naturally in 3-4 lines, keep the facts, sound like a real person not a bot: '+base);
     if(aiShill&&aiShill!=='IGNORE'&&aiShill.length>10&&aiShill.split('\n').length<=6)base=aiShill;
   }catch(_){}
-  await sendImg(ctx.chat.id,base+caLine+tgLine,{});
+  await sendWithTracker(shillMsg,ctx.chat.id,base+caLine+tgLine,{});
 });
 var chatHistory=[];
 function addHistory(text){chatHistory.push(text);if(chatHistory.length>8)chatHistory.shift();}
@@ -155,9 +175,9 @@ bot.on('message',async function(ctx){
     var caW=['ca','contract address','contract','token address'];
     if(caW.some(function(w){return lower===w||lower.includes(w);})){
       if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);
-      await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});
+      await sendWithTracker(caMsg,ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});
     }
-    if(lower==='x'||lower==='twitter')return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
+    if(lower==='x'||lower==='twitter')return sendWithTracker(xMsg,ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
     if(lower==='socials'||lower==='links')return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});
     return;
   }
@@ -171,9 +191,9 @@ bot.on('message',async function(ctx){
   var caWords=['ca','contract address','token address','where is the ca','give ca','show ca','drop ca','contract'];
   if(caWords.some(function(w){return lower2===w||lower2.includes(w);})){
     if(!caUnlocked)return ctx.reply(NOT_LIVE[Math.floor(Math.random()*NOT_LIVE.length)]);
-    await sendImg(ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});
+    await sendWithTracker(caMsg,ctx.chat.id,'$Mpc Contract Address',{});return ctx.reply('<code>'+CA+'</code>',{parse_mode:'HTML'});
   }
-  if(lower2==='x'||lower2==='twitter'||lower2.includes('follow on'))return sendImg(ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
+  if(lower2==='x'||lower2==='twitter'||lower2.includes('follow on'))return sendWithTracker(xMsg,ctx.chat.id,'Follow $Mpc on X',{reply_markup:{inline_keyboard:[[{text:'Follow on X',url:TWITTER}]]}});
   if(lower2==='socials'||lower2==='links')return ctx.reply('<a href=\'https://dexscreener.com/bsc/0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> Chart</a> | <a href=\'https://pancakeswap.finance/swap?outputCurrency=0x5794FF15f6bd01Eaa25DB48353886810467B0D1D\'> PancakeSwap</a>'+(TWITTER?' | <a href=\''+TWITTER+'\'>Twitter</a>':''),{parse_mode:'HTML',disable_web_page_preview:true});
   if(isPrivate){try{var gr=await smartAsk(chatHistory.join('\n'));if(gr&&gr!=='IGNORE')return ctx.reply(gr);}catch(_){}return;}
   if(RESPONSE_MODE==='focused'){if(text.indexOf('?')===-1)return;try{var gr2=await smartAsk(chatHistory.join('\n'));if(gr2&&gr2!=='IGNORE')return ctx.reply(gr2);}catch(_){}return;}
