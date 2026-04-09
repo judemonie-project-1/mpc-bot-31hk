@@ -106,7 +106,7 @@ bot.command('shill',async function(ctx){
     if(!sm||sm==='IGNORE'||sm.split('\n').length>8)sm=TICKER+' \u2014 community-owned. Renounced. '+LOCKED+'.\nNarrative is real. Cap is low. Load up.';
     var caLine=caUnlocked?'\n\nCA:\n'+CA:'\n\nCA dropping soon.';
     await sendImg(ctx.chat.id,sm+caLine,{});
-  }catch(e){ctx.reply(TICKER+' is the move. Load up.');}
+  }catch(e){var sf=[TICKER+' built by community. Renounced. '+LOCKED+'.',TICKER+' is the quiet move. Get in.',TICKER+' \u2014 community-owned. Real narrative. Load up.'];ctx.reply(sf[Math.floor(Math.random()*sf.length)]+(caUnlocked?'\n\nCA:\n'+CA:''));}
 });
 bot.on('new_chat_members',async function(ctx){if(ctx.message.new_chat_members.some(function(m){return m.is_bot;}))return;try{await ctx.deleteMessage();}catch(_){}for(var i=0;i<ctx.message.new_chat_members.length;i++){var mem=ctx.message.new_chat_members[i];var h=mem.username?'@'+mem.username:mem.first_name;var opts=[h+' joined $Mpc.\nRENOUNCED \u2022 LP BURNED \u2022 0%/0% tax\n'+(caUnlocked?CA:'CA coming soon.'),'Welcome, '+h+'. $Mpc \u2022 BNB Smart Chain (BSC)\n'+(caUnlocked?'CA: '+CA:'Launch incoming.')];var msg=opts[Math.floor(Math.random()*opts.length)];var s=await ctx.reply(msg);autoDel(ctx.chat.id,s.message_id,60000);}});
 var chatHistory=[];
