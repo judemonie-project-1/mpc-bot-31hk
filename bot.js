@@ -1,4 +1,4 @@
-// build:1775751646117
+// build:1775751953046
 'use strict';
 var Telegraf=require('telegraf').Telegraf;
 var express=require('express');
@@ -111,7 +111,7 @@ bot.command('shill',async function(ctx){
   ];
   var base=shillMsgs[Math.floor(Math.random()*shillMsgs.length)];
   var caLine=caUnlocked?'\n\nCA:\n'+CA:'\n\nCA dropping soon.';
-  var tgLine=TG?'\\n\\n\\u{1F4AC} Join: '+TG:'';
+  var tgLine=TG?'\n\nJoin: '+TG:'';
   try{
     var aiShill=await smartAsk('Rewrite this shill naturally in 3-4 lines, keep the facts, sound like a real person not a bot: '+base);
     if(aiShill&&aiShill!=='IGNORE'&&aiShill.length>10&&aiShill.split('\n').length<=6)base=aiShill;
