@@ -1,4 +1,4 @@
-// build:1775755696887
+// build:1776242328864
 'use strict';
 var Telegraf=require('telegraf').Telegraf;
 var express=require('express');
@@ -31,12 +31,12 @@ loadState();
 var _IMG1=path.join(__dirname,'mpc.jpg');
 var _IMG2=path.join(__dirname,'siren.jpg');
 var IMG=fs.existsSync(_IMG1)?_IMG1:(fs.existsSync(_IMG2)?_IMG2:_IMG1);
-var IMG_BUF=null;try{if(fs.existsSync(IMG))IMG_BUF=fs.readFileSync(IMG);}catch(_){}
+var IMG_BUF=null;try{if(fs.existsSync(IMG)){IMG_BUF=fs.readFileSync(IMG);console.log('Image loaded:',path.basename(IMG));}else{console.log('No image file found:',IMG);}}catch(e){console.log('Image error:',e.message);}
 var caMsg=new Map(),xMsg=new Map(),shillMsg=new Map();
 var silImgId=null,strikes=new Map(),spamTracker=new Map(),lastReplies=[];
 var SHOUTOUT_ON=true,shoutTimer=null;
 async function delPrev(map,cid){var mid=map.get(cid);if(mid){try{await bot.telegram.deleteMessage(cid,mid);}catch(_){}map.delete(cid);}}
-async function sendWithTracker(map,cid,cap,extra){await delPrev(map,cid);extra=extra||{};if(IMG_BUF){try{var m=await bot.telegram.sendPhoto(cid,{source:IMG_BUF},Object.assign({caption:cap,parse_mode:'HTML'},extra));map.set(cid,m.message_id);return m;}catch(e){IMG_BUF=null;}}var m2=await bot.telegram.sendMessage(cid,cap,Object.assign({parse_mode:'HTML'},extra));map.set(cid,m2.message_id);return m2;}
+async function sendWithTracker(map,cid,cap,extra){await delPrev(map,cid);extra=extra||{};if(IMG_BUF){try{var m=await bot.telegram.sendPhoto(cid,{source:IMG_BUF},Object.assign({caption:cap,parse_mode:'HTML'},extra));map.set(cid,m.message_id);return m;}catch(e){console.log('Photo send failed:',e.message);}}var m2=await bot.telegram.sendMessage(cid,cap,Object.assign({parse_mode:'HTML'},extra));map.set(cid,m2.message_id);return m2;}
 async function sendImg(cid,cap,extra){return sendWithTracker(shillMsg,cid,cap,extra);}
 function autoDel(cid,mid,ms){setTimeout(function(){try{bot.telegram.deleteMessage(cid,mid);}catch(_){}},ms);}
 async function isAdmin(ctx,uid){var t=ctx.chat&&ctx.chat.type;if(t!=='group'&&t!=='supergroup')return false;try{var m=await ctx.telegram.getChatMember(ctx.chat.id,uid);return m.status==='administrator'||m.status==='creator';}catch(_){return false;}}
@@ -68,8 +68,7 @@ var silIdx=0;
 async function fireSilence(){if(!groupChatId)return resetSil();
   try{
     // Delete previous silence breaker first
-    if(silImgId){try{await bot.telegram.deleteMessage(groupChatId,silImgId);}catch(_){}silImgId=null;}
-    try{await bot.telegram.unpinChatMessage(groupChatId);}catch(_){}
+    // Previous silence breaker stays  new one adds below it naturally
     var p=SIL_ANG[silIdx%SIL_ANG.length];silIdx++;
     var cap=await smartAsk(p);
     if(cap&&cap!=='IGNORE'){
@@ -79,7 +78,6 @@ async function fireSilence(){if(!groupChatId)return resetSil();
       if(!silM)silM=await bot.telegram.sendMessage(groupChatId,cap,{parse_mode:'HTML'});
       silImgId=silM.message_id;
       // Pin and notify all
-      try{await bot.telegram.pinChatMessage(groupChatId,silImgId,{disable_notification:false});}catch(_){}
     }
   }catch(e){console.log('Silence breaker error:',e.message);}
   resetSil();
